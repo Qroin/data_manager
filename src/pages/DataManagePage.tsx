@@ -40,15 +40,20 @@ const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, p
       const baseDate = new Date(settings.currentDate);
       const [hours, minutes] = settings.baseTime.split(':');
       const now = new Date();
-      
-      // 설정된 기준 시간에서 실제 경과 시간을 더함
-      const baseDateTime = new Date(baseDate);
-      baseDateTime.setHours(parseInt(hours), parseInt(minutes), now.getSeconds(), now.getMilliseconds());
-      
+
+      // 기준시간 셋팅
+      baseDate.setHours(parseInt(hours), parseInt(minutes), now.getSeconds(), now.getMilliseconds());
+
+      // 현재시간과 기준시간 차이
+      const diffMs = baseDate.getTime() - now.getTime();
+
+      // 새 기준시간 = 현재시간 + 차이
+      const newBaseDateTime = new Date(now.getTime() + diffMs);
+
       setInspection(prev => ({
         ...prev,
         judgment: 'No',
-        date: baseDateTime.toISOString().split('T')[0]
+        date: newBaseDateTime.toISOString().split('T')[0]
       }));
     }
   }, [itemId]);
@@ -60,12 +65,13 @@ const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, p
       const baseDate = new Date(settings.currentDate);
       const [hours, minutes] = settings.baseTime.split(':');
       const now = new Date();
-      
-      // 설정된 기준 시간에서 실제 경과 시간을 더함
-      const baseDateTime = new Date(baseDate);
-      baseDateTime.setHours(parseInt(hours), parseInt(minutes), now.getSeconds(), now.getMilliseconds());
-      const timeString = baseDateTime.toISOString();
-      
+
+      baseDate.setHours(parseInt(hours), parseInt(minutes), now.getSeconds(), now.getMilliseconds());
+
+      const diffMs = baseDate.getTime() - now.getTime();
+      const newBaseDateTime = new Date(now.getTime() + diffMs);
+      const timeString = newBaseDateTime.toISOString();
+
       const updatedInspection: InspectionData = {
         ...inspection,
         updatedAt: timeString,
@@ -84,14 +90,32 @@ const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, p
   const handleCapturePhoto = async () => {
     setIsCapturing(true);
     try {
-      const { dataURL, fileName } = await capturePhoto();
       const settings = getSettings();
-      const photoPath = generatePhotoPath(settings.currentDate, settings.baseTime);
-      
-      // 로컬스토리지에 사진 데이터 저장
+      const baseDate = new Date(settings.currentDate);
+      const [hours, minutes] = settings.baseTime.split(':');
+      const now = new Date();
+
+      baseDate.setHours(parseInt(hours), parseInt(minutes), now.getSeconds(), now.getMilliseconds());
+
+      const diffMs = baseDate.getTime() - now.getTime();
+      const newBaseDateTime = new Date(now.getTime() + diffMs);
+
+      // 파일명, 폴더명용 날짜시간 문자열 (예: "20250718_1430")
+      const yyyy = newBaseDateTime.getFullYear();
+      const mm = String(newBaseDateTime.getMonth() + 1).padStart(2, '0');
+      const dd = String(newBaseDateTime.getDate()).padStart(2, '0');
+      const hh = String(newBaseDateTime.getHours()).padStart(2, '0');
+      const min = String(newBaseDateTime.getMinutes()).padStart(2, '0');
+
+      const folderName = `${yyyy}${mm}${dd}`;
+      const fileName = `${folderName}_${hh}${min}.jpg`;
+
+      const { dataURL } = await capturePhoto();
+      const photoPath = `${folderName}/${fileName}`;
       savePhotoToStorage(photoPath, dataURL);
+
       setInspection(prev => ({ ...prev, photoPath }));
-      alert('사진이 성공적으로 촬영되었습니다.');
+      alert('사진이 성공적으로 촬영 및 저장되었습니다.');
     } catch (error) {
       alert('카메라 접근에 실패했습니다.');
     }
