@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { Upload, Trash2, Download, Settings, Clock } from 'lucide-react';
-import { readExcelFile, exportToExcel } from '../utils/excelUtils';
-import { saveExcelData, getExcelData, getInspectionData, clearAllData, saveSettings, getSettings } from '../utils/localStorage';
-import CurrentTime from '../components/CurrentTime';
+import React, { useState, useEffect } from "react";
+import { Upload, Trash2, Download, Settings, Clock } from "lucide-react";
+import { readExcelFile, exportToExcel } from "../utils/excelUtils";
+import { saveExcelData, getExcelData, getInspectionData, clearAllData, saveSettings, getSettings, initializeAppStartTime } from "../utils/localStorage";
+import CurrentTime from "../components/CurrentTime";
 
 interface HomePageProps {
   onPageChange: (page: string) => void;
@@ -13,7 +13,19 @@ const HomePage: React.FC<HomePageProps> = ({ onPageChange }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showExportConfirm, setShowExportConfirm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [settings, setSettings] = useState(getSettings());
+  const [settings, setSettings] = useState(() => {
+    const savedSettings = getSettings();
+    return {
+      currentDate: savedSettings.currentDate || new Date().toISOString().slice(0, 10),
+      baseTime: savedSettings.baseTime || new Date().toISOString().slice(11, 16),
+      appStartTime: savedSettings.appStartTime || new Date().toISOString(),
+    };
+  });
+
+  // 앱 시작 시 appStartTime 초기화
+  useEffect(() => {
+    initializeAppStartTime();
+  }, []);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -24,9 +36,9 @@ const HomePage: React.FC<HomePageProps> = ({ onPageChange }) => {
       const data = await readExcelFile(file);
       saveExcelData(data);
       alert(`성공적으로 ${data.length}개의 데이터를 불러왔습니다.`);
-      onPageChange('search');
+      onPageChange("search");
     } catch (error) {
-      alert('파일 읽기에 실패했습니다. 올바른 엑셀 파일인지 확인해주세요.');
+      alert("파일 읽기에 실패했습니다. 올바른 엑셀 파일인지 확인해주세요.");
     }
     setIsLoading(false);
   };
@@ -34,7 +46,7 @@ const HomePage: React.FC<HomePageProps> = ({ onPageChange }) => {
   const handleDeleteData = () => {
     clearAllData();
     setShowDeleteConfirm(false);
-    alert('모든 데이터가 삭제되었습니다.');
+    alert("모든 데이터가 삭제되었습니다.");
   };
 
   const handleExportData = () => {
@@ -42,13 +54,18 @@ const HomePage: React.FC<HomePageProps> = ({ onPageChange }) => {
     const inspectionData = getInspectionData();
     exportToExcel(excelData, inspectionData);
     setShowExportConfirm(false);
-    alert('엑셀 파일로 백업이 완료되었습니다.');
+    alert("엑셀 파일로 백업이 완료되었습니다.");
   };
 
   const handleSaveSettings = () => {
-    saveSettings(settings);
+    const newBaseTime = new Date(`${settings.currentDate}T${settings.baseTime}:00`);
+    if (isNaN(newBaseTime.getTime())) {
+      alert("유효한 날짜와 시간을 입력해주세요.");
+      return;
+    }
+    saveSettings({ ...settings, baseTime: settings.baseTime, currentDate: settings.currentDate });
     setShowSettings(false);
-    alert('설정이 저장되었습니다.');
+    alert("설정이 저장되었습니다.");
   };
 
   return (

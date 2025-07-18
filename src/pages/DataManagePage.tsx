@@ -3,6 +3,7 @@ import { Camera, Save, ArrowLeft, Eye, X } from 'lucide-react';
 import { ExcelRow, InspectionData } from '../types';
 import { getExcelData, getInspectionData, updateInspectionDataItem, getSettings } from '../utils/localStorage';
 import { capturePhoto, generatePhotoPath, savePhotoToStorage, getPhotoFromStorage, deletePhotoFromStorage } from '../utils/photoUtils';
+import { getSimulatedTime } from '../utils/timeUtils';  // ✅ 추가
 
 interface DataManagePageProps {
   itemId: string;
@@ -36,15 +37,7 @@ const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, p
     if (inspectionData[itemId]) {
       setInspection(inspectionData[itemId]);
     } else {
-      const settings = getSettings();
-      const baseDate = new Date(settings.currentDate);
-      const [hours, minutes] = settings.baseTime.split(':');
-      const now = new Date();
-      
-      // 설정된 기준 시간에서 실제 경과 시간을 더함
-      const baseDateTime = new Date(baseDate);
-      baseDateTime.setHours(parseInt(hours), parseInt(minutes), now.getSeconds(), now.getMilliseconds());
-      
+      const baseDateTime = getSimulatedTime(); // ✅ 대체
       setInspection(prev => ({
         ...prev,
         judgment: 'No',
@@ -56,22 +49,15 @@ const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, p
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const settings = getSettings();
-      const baseDate = new Date(settings.currentDate);
-      const [hours, minutes] = settings.baseTime.split(':');
-      const now = new Date();
-      
-      // 설정된 기준 시간에서 실제 경과 시간을 더함
-      const baseDateTime = new Date(baseDate);
-      baseDateTime.setHours(parseInt(hours), parseInt(minutes), now.getSeconds(), now.getMilliseconds());
+      const baseDateTime = getSimulatedTime(); // ✅ 대체
       const timeString = baseDateTime.toISOString();
-      
+
       const updatedInspection: InspectionData = {
         ...inspection,
         updatedAt: timeString,
         createdAt: inspection.createdAt || timeString
       };
-      
+
       updateInspectionDataItem(itemId, updatedInspection);
       alert('데이터가 성공적으로 저장되었습니다.');
       onPageChange(previousPage);
@@ -80,7 +66,6 @@ const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, p
     }
     setIsSaving(false);
   };
-
   const handleCapturePhoto = async () => {
     setIsCapturing(true);
     try {

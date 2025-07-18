@@ -28,13 +28,47 @@ export const updateInspectionDataItem = (id: string, data: InspectionData): void
   saveInspectionData(allData);
 };
 
-export const saveSettings = (settings: AppSettings): void => {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+// utils/localStorage.ts
+export interface TimeSettings {
+  currentDate: string; // YYYY-MM-DD
+  baseTime: string; // HH:mm
+  appStartTime?: string; // ISO 문자열
+}
+
+export const saveSettings = (settings: TimeSettings): void => {
+  try {
+    localStorage.setItem("timeSettings", JSON.stringify(settings));
+  } catch (error) {
+    console.error("Error saving settings to localStorage:", error);
+  }
 };
 
-export const getSettings = (): AppSettings => {
-  const data = localStorage.getItem(SETTINGS_KEY);
-  return data ? JSON.parse(data) : { baseTime: '09:00', currentDate: new Date().toISOString().split('T')[0] };
+export const getSettings = (): TimeSettings => {
+  try {
+    const settingsStr = localStorage.getItem("timeSettings");
+    return settingsStr
+      ? JSON.parse(settingsStr)
+      : {
+          currentDate: new Date().toISOString().slice(0, 10),
+          baseTime: new Date().toISOString().slice(11, 16),
+          appStartTime: new Date().toISOString(),
+        };
+  } catch (error) {
+    console.error("Error loading settings from localStorage:", error);
+    return {
+      currentDate: new Date().toISOString().slice(0, 10),
+      baseTime: new Date().toISOString().slice(11, 16),
+      appStartTime: new Date().toISOString(),
+    };
+  }
+};
+// 초기 appStartTime 설정 (최초 실행 시)
+export const initializeAppStartTime = (): void => {
+  const settings = getSettings();
+  if (!settings.appStartTime) {
+    settings.appStartTime = new Date().toISOString();
+    saveSettings(settings);
+  }
 };
 
 export const clearAllData = (): void => {
