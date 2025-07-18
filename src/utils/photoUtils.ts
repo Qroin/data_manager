@@ -32,7 +32,9 @@ export const capturePhoto = (): Promise<{ dataURL: string; fileName: string }> =
 };
 export function generatePhotoPath(): string {
   const simulatedTime = getSimulatedTime();
-  return `photos/photo_${simulatedTime.toISOString().replace(/[:.]/g, "-")}.jpg`;
+  const dateStr = simulatedTime.toISOString().slice(0, 10).replace(/-/g, "");
+  const timeStr = simulatedTime.toISOString().slice(11, 19).replace(/:/g, "");
+  return `${dateStr}/${dateStr}_${timeStr}.jpg`;
 }
 
 export function savePhotoToStorage(photoPath: string, dataURL: string): void {
