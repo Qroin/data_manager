@@ -1,9 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { Camera, Save, ArrowLeft, Eye, X } from 'lucide-react';
-import { ExcelRow, InspectionData } from '../types';
-import { getExcelData, getInspectionData, updateInspectionDataItem, getSettings } from '../utils/localStorage';
-import { capturePhoto, generatePhotoPath, savePhotoToStorage, getPhotoFromStorage, deletePhotoFromStorage } from '../utils/photoUtils';
-import { getSimulatedTime } from '../utils/timeUtils';  // ✅ 추가
+import React, { useState, useEffect } from "react";
+import { Camera, Save, ArrowLeft, Eye, X } from "lucide-react";
+import { ExcelRow, InspectionData } from "../types";
+import {
+  getExcelData,
+  getInspectionData,
+  updateInspectionDataItem,
+} from "../utils/localStorage";
+import {
+  capturePhoto,
+  generatePhotoPath,
+  savePhotoToStorage,
+  getPhotoFromStorage,
+  deletePhotoFromStorage,
+} from "../utils/photoUtils";
+import { getSimulatedTime, formatTime } from "../utils/timeUtils";
 
 interface DataManagePageProps {
   itemId: string;
@@ -11,17 +21,25 @@ interface DataManagePageProps {
   previousPage: string;
 }
 
-const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, previousPage }) => {
+const DataManagePage: React.FC<DataManagePageProps> = ({
+  itemId,
+  onPageChange,
+  previousPage,
+}) => {
   const [itemData, setItemData] = useState<ExcelRow | null>(null);
-  const [inspection, setInspection] = useState<InspectionData>({
-    id: itemId,
-    memo: '',
-    judgment: 'No',
-    inspectionResult: '',
-    date: '',
-    photoPath: '',
-    createdAt: '',
-    updatedAt: ''
+  const [inspection, setInspection] = useState<InspectionData>(() => {
+    const simulatedTime = getSimulatedTime();
+    return {
+      id: itemId,
+      memo: "",
+      judgment: "No",
+      inspectionResult: "",
+      date: simulatedTime.toISOString().split("T")[0],
+      time: simulatedTime.toISOString().slice(11, 16), // HH:mm
+      photoPath: "",
+      createdAt: simulatedTime.toISOString(),
+      updatedAt: simulatedTime.toISOString(),
+    };
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -30,55 +48,61 @@ const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, p
 
   useEffect(() => {
     const excelData = getExcelData();
-    const item = excelData.find(row => row.id === itemId);
+    const item = excelData.find((row) => row.id === itemId);
     setItemData(item || null);
 
     const inspectionData = getInspectionData();
     if (inspectionData[itemId]) {
       setInspection(inspectionData[itemId]);
     } else {
-      const baseDateTime = getSimulatedTime(); // ✅ 대체
-      setInspection(prev => ({
-        ...prev,
-        judgment: 'No',
-        date: baseDateTime.toISOString().split('T')[0]
-      }));
+      const simulatedTime = getSimulatedTime();
+      setInspection({
+        id: itemId,
+        memo: "",
+        judgment: "No",
+        inspectionResult: "",
+        date: simulatedTime.toISOString().split("T")[0],
+        time: simulatedTime.toISOString().slice(11, 16),
+        photoPath: "",
+        createdAt: simulatedTime.toISOString(),
+        updatedAt: simulatedTime.toISOString(),
+      });
     }
   }, [itemId]);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const baseDateTime = getSimulatedTime(); // ✅ 대체
-      const timeString = baseDateTime.toISOString();
+      const simulatedTime = getSimulatedTime();
+      const timeString = simulatedTime.toISOString();
 
       const updatedInspection: InspectionData = {
         ...inspection,
+        date: simulatedTime.toISOString().split("T")[0],
+        time: simulatedTime.toISOString().slice(11, 16),
         updatedAt: timeString,
-        createdAt: inspection.createdAt || timeString
+        createdAt: inspection.createdAt || timeString,
       };
 
       updateInspectionDataItem(itemId, updatedInspection);
-      alert('데이터가 성공적으로 저장되었습니다.');
+      alert("데이터가 성공적으로 저장되었습니다.");
       onPageChange(previousPage);
     } catch (error) {
-      alert('저장 중 오류가 발생했습니다.');
+      alert("저장 중 오류가 발생했습니다.");
     }
     setIsSaving(false);
   };
+
   const handleCapturePhoto = async () => {
     setIsCapturing(true);
     try {
       const { dataURL, fileName } = await capturePhoto();
-      const settings = getSettings();
-      const photoPath = generatePhotoPath(settings.currentDate, settings.baseTime);
-      
-      // 로컬스토리지에 사진 데이터 저장
+      const photoPath = generatePhotoPath();
       savePhotoToStorage(photoPath, dataURL);
-      setInspection(prev => ({ ...prev, photoPath }));
-      alert('사진이 성공적으로 촬영되었습니다.');
+      setInspection((prev) => ({ ...prev, photoPath }));
+      alert("사진이 성공적으로 촬영되었습니다.");
     } catch (error) {
-      alert('카메라 접근에 실패했습니다.');
+      alert("카메라 접근에 실패했습니다.");
     }
     setIsCapturing(false);
   };
@@ -94,10 +118,10 @@ const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, p
   const handleDeletePhoto = () => {
     if (inspection.photoPath) {
       deletePhotoFromStorage(inspection.photoPath);
-      setInspection(prev => ({ ...prev, photoPath: '' }));
+      setInspection((prev) => ({ ...prev, photoPath: "" }));
       setShowPhotoPreview(false);
       setPreviewPhotoData(null);
-      alert('사진이 삭제되었습니다.');
+      alert("사진이 삭제되었습니다.");
     }
   };
 
@@ -128,7 +152,7 @@ const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, p
             </div>
           </div>
 
-          {/* 상단 정보 (조밀하게 표현) */}
+          {/* 상단 정보 */}
           <div className="p-6 bg-gray-50">
             <h3 className="text-lg font-semibold mb-4">기본 정보</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
@@ -174,13 +198,17 @@ const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, p
           {/* 하단 입력 폼 */}
           <div className="p-6 space-y-6">
             <h3 className="text-lg font-semibold">점검 정보</h3>
-            
+
             {/* 메모 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">메모</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                메모
+              </label>
               <textarea
                 value={inspection.memo}
-                onChange={(e) => setInspection(prev => ({ ...prev, memo: e.target.value }))}
+                onChange={(e) =>
+                  setInspection((prev) => ({ ...prev, memo: e.target.value }))
+                }
                 rows={3}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="메모를 입력하세요..."
@@ -189,10 +217,17 @@ const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, p
 
             {/* 점검결과 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">점검결과</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                점검결과
+              </label>
               <select
                 value={inspection.inspectionResult}
-                onChange={(e) => setInspection(prev => ({ ...prev, inspectionResult: e.target.value as any }))}
+                onChange={(e) =>
+                  setInspection((prev) => ({
+                    ...prev,
+                    inspectionResult: e.target.value as any,
+                  }))
+                }
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">선택하세요</option>
@@ -203,20 +238,41 @@ const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, p
               </select>
             </div>
 
-            {/* 날짜 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">날짜</label>
-              <input
-                type="date"
-                value={inspection.date}
-                onChange={(e) => setInspection(prev => ({ ...prev, date: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+            {/* 날짜 및 시간 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  날짜
+                </label>
+                <input
+                  type="date"
+                  value={inspection.date}
+                  onChange={(e) =>
+                    setInspection((prev) => ({ ...prev, date: e.target.value }))
+                  }
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  시간
+                </label>
+                <input
+                  type="time"
+                  value={inspection.time}
+                  onChange={(e) =>
+                    setInspection((prev) => ({ ...prev, time: e.target.value }))
+                  }
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
             </div>
 
             {/* 카메라 버튼 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">사진 촬영</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                사진 촬영
+              </label>
               <div className="flex space-x-3">
                 <button
                   onClick={handleCapturePhoto}
@@ -224,9 +280,8 @@ const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, p
                   className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
                 >
                   <Camera className="h-5 w-5 mr-2" />
-                  {isCapturing ? '촬영 중...' : '사진 촬영'}
+                  {isCapturing ? "촬영 중..." : "사진 촬영"}
                 </button>
-                
                 {inspection.photoPath && (
                   <button
                     onClick={handlePhotoPreview}
@@ -246,24 +301,30 @@ const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, p
 
             {/* 판정 버튼 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">판정</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                판정
+              </label>
               <div className="flex space-x-4">
                 <button
-                  onClick={() => setInspection(prev => ({ ...prev, judgment: 'Yes' }))}
+                  onClick={() =>
+                    setInspection((prev) => ({ ...prev, judgment: "Yes" }))
+                  }
                   className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
-                    inspection.judgment === 'Yes'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    inspection.judgment === "Yes"
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                   }`}
                 >
                   Yes
                 </button>
                 <button
-                  onClick={() => setInspection(prev => ({ ...prev, judgment: 'No' }))}
+                  onClick={() =>
+                    setInspection((prev) => ({ ...prev, judgment: "No" }))
+                  }
                   className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
-                    inspection.judgment === 'No'
-                      ? 'bg-red-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    inspection.judgment === "No"
+                      ? "bg-red-600 text-white"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                   }`}
                 >
                   No
@@ -280,7 +341,7 @@ const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, p
               className="w-full flex items-center justify-center px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-semibold text-lg"
             >
               <Save className="h-5 w-5 mr-2" />
-              {isSaving ? '저장 중...' : '저장'}
+              {isSaving ? "저장 중..." : "저장"}
             </button>
           </div>
         </div>
@@ -298,9 +359,7 @@ const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, p
                   <X className="h-6 w-6" />
                 </button>
               </div>
-              
               <div className="space-y-4">
-                {/* 사진 경로 및 삭제 버튼 */}
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <span className="text-sm font-medium text-gray-700">
                     {inspection.photoPath}
@@ -312,8 +371,6 @@ const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, p
                     <X className="h-5 w-5" />
                   </button>
                 </div>
-                
-                {/* 사진 미리보기 */}
                 {previewPhotoData && (
                   <div className="text-center">
                     <img
@@ -323,14 +380,12 @@ const DataManagePage: React.FC<DataManagePageProps> = ({ itemId, onPageChange, p
                     />
                   </div>
                 )}
-                
                 {!previewPhotoData && (
                   <div className="text-center py-8">
                     <p className="text-gray-500">사진을 불러올 수 없습니다.</p>
                   </div>
                 )}
               </div>
-              
               <div className="flex space-x-4 mt-6">
                 <button
                   onClick={() => setShowPhotoPreview(false)}

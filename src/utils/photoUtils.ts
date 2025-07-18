@@ -1,8 +1,5 @@
-export const generatePhotoPath = (baseDate: string, baseTime: string): string => {
-  const now = new Date();
-  const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '');
-  return `${baseDate.replace(/-/g, '')}_${timeStr}.jpg`;
-};
+// utils/photoUtils.ts
+import { getSimulatedTime } from "./timeUtils";
 
 export const capturePhoto = (): Promise<{ dataURL: string; fileName: string }> => {
   return new Promise((resolve, reject) => {
@@ -33,18 +30,32 @@ export const capturePhoto = (): Promise<{ dataURL: string; fileName: string }> =
       .catch(reject);
   });
 };
+export function generatePhotoPath(): string {
+  const simulatedTime = getSimulatedTime();
+  return `photos/photo_${simulatedTime.toISOString().replace(/[:.]/g, "-")}.jpg`;
+}
 
-// 로컬스토리지에 사진 데이터 저장
-export const savePhotoToStorage = (fileName: string, dataURL: string): void => {
-  localStorage.setItem(`photo_${fileName}`, dataURL);
-};
+export function savePhotoToStorage(photoPath: string, dataURL: string): void {
+  try {
+    localStorage.setItem(photoPath, dataURL);
+  } catch (error) {
+    console.error("Error saving photo to localStorage:", error);
+  }
+}
 
-// 로컬스토리지에서 사진 데이터 가져오기
-export const getPhotoFromStorage = (fileName: string): string | null => {
-  return localStorage.getItem(`photo_${fileName}`);
-};
+export function getPhotoFromStorage(photoPath: string): string | null {
+  try {
+    return localStorage.getItem(photoPath);
+  } catch (error) {
+    console.error("Error retrieving photo from localStorage:", error);
+    return null;
+  }
+}
 
-// 로컬스토리지에서 사진 데이터 삭제
-export const deletePhotoFromStorage = (fileName: string): void => {
-  localStorage.removeItem(`photo_${fileName}`);
-};
+export function deletePhotoFromStorage(photoPath: string): void {
+  try {
+    localStorage.removeItem(photoPath);
+  } catch (error) {
+    console.error("Error deleting photo from localStorage:", error);
+  }
+}
