@@ -17,6 +17,7 @@ export interface InspectionData {
   judgment: 'Yes' | 'No' | '';
   inspectionResult: '적합' | '부적합' | '부재종결' | '기타' | '';
   date: string;
+  time: string;
   photoPath: string;
   createdAt: string;
   updatedAt: string;
